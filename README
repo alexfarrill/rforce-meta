@@ -1,0 +1,52 @@
+Use in conjunction with RForce to interact with the SalesForce Metadata API (as opposed to the regular API).  This will allow you to do things such as add custom fields to SalesForce objects.  Note that this project is not particularly well-maintained and is basically provided as proof that a more refined effort at a later time would provide a suitable library for interacting with this API.  I am offering this up on the chance it is useful to someone as SalesForce offers an abundance of useless information with regard to using this API and very little concrete or useful for Ruby programmers or anyone operating outside of Java.
+
+Much of this code is borrowed from RForce, which is a much better library, but does not work with the Metadata API out of the box.
+
+SETUP:
+1) Drop this file in your Rails /lib 
+
+2) Define the constant SALESFORCE as a hash with your SalesForce email and password somewhere
+
+3) Add some methods to ApplicationController:
+N.B. if this doesn't suit your style, edit the salesforce_meta.rb file to accept the metadata url in some other way such as by passing an argument on initialization.  Note that the metadata url will be returned in the response to your login to the regular SalesForce API as indicated below.
+
+  ### SalesForce
+  @@salesforce = nil
+  @@salesforce_metadata = nil
+  @@salesforce_metadata_server_url = nil
+  
+  def self.salesforce
+    unless @@salesforce
+      require 'rforce'
+      s = RForce::Binding.new 'https://www.salesforce.com/services/Soap/u/10.0'
+      response = s.login SALESFORCE['email'], SALESFORCE['password']
+      @@salesforce = s # do assignment here so that if login fails (RuntimeError), nothing will be assigned
+      @@salesforce_metadata_server_url = response[:loginResponse][:result][:metadataServerUrl]
+    end
+    @@salesforce
+  end
+  
+  def self.salesforce_metadata
+    unless @@salesforce_metadata
+      require 'salesforce_metadata'
+      @@salesforce_metadata = SalesforceMetadata.new
+    end
+    @@salesforce_metadata
+  end
+  
+  def self.salesforce_metadata_server_url
+    @@salesforce_metadata_server_url
+  end 
+
+4) Use in your project, here are some examples:
+
+  require 'salesforce_meta'
+  s = SalesforceMeta.new
+
+  s.create(:fullName => "Contact.MyBool", :label => "Something Was Completed", :type => "Checkbox", :defaultValue => false)
+  s.create(:fullName => "Contact.MyDate", :label => "Date It Was Completed On", :type => "Date")
+
+  s.destroy(:fullName => "Contact.MyBool")
+  s.destroy(:fullName => "Contact.MyDate")
+
+
